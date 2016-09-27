@@ -1,14 +1,18 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.android.databinding'
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.1"
+    compileSdkVersion 24
+    buildToolsVersion "23.0.3"
+
+    dataBinding {
+        enabled = true
+    }
 
     defaultConfig {
         applicationId "us.ktv.android"
-        minSdkVersion 17
-        targetSdkVersion 23
+        testApplicationId "us.ktv.android.test"
+        minSdkVersion 21
+        targetSdkVersion 24
         versionCode 1
         versionName "1.0"
     }
@@ -24,15 +28,10 @@ buildscript {
     repositories {
         jcenter()
     }
-
-    dependencies {
-        classpath parent.ext.libraries.dataBinder
-    }
 }
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
     compile parent.libraries.appcompat
     compile parent.libraries.design
     compile parent.libraries.recyclerview
@@ -42,7 +41,13 @@ dependencies {
     compile parent.libraries.drawee
 
     compile parent.libraries.butterknife
+    compile parent.libraries.swipeToLoadLayout
+    compile parent.libraries.materialloadingprogressbar
+    compile parent.libraries.fancyButton
+
 
     compile project(':database')
     compile project(':network')
+    compile 'com.android.support:support-v4:24.2.1'
+    testCompile 'junit:junit:4.12'
 }

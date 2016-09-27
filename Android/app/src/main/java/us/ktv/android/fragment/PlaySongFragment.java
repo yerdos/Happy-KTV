@@ -8,18 +8,19 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.Toast;
+import android.widget.TextView;
 
-import butterknife.ButterKnife;
 import butterknife.InjectView;
+import mehdi.sakout.fancybuttons.FancyButton;
 import us.ktv.android.BR;
 import us.ktv.android.Presenter;
 import us.ktv.android.R;
+import us.ktv.android.activity.MainActivity;
 import us.ktv.android.utils.MicApplication;
 import us.ktv.database.datamodel.Song;
 import us.ktv.database.datamodel.SongColumn;
 import us.ktv.database.datamodel.SongHelper;
+import us.ktv.network.NetworkException;
 import us.ktv.network.SocketCallbackListener;
 
 public class PlaySongFragment extends Fragment implements View.OnClickListener {
@@ -27,7 +28,7 @@ public class PlaySongFragment extends Fragment implements View.OnClickListener {
     private Song song = null;
 
     @InjectView(R.id.control)
-    Button controlButton;
+    FancyButton controlButton;
 
     public static PlaySongFragment newInstance(String songId) {
         PlaySongFragment fragment = new PlaySongFragment();
@@ -55,7 +56,7 @@ public class PlaySongFragment extends Fragment implements View.OnClickListener {
                              Bundle savedInstanceState) {
         ViewDataBinding binding = DataBindingUtil.inflate(inflater, R.layout.fragment_play_song, container, false);
         binding.setVariable(BR.playingSong, song);
-        controlButton = (Button) binding.getRoot().findViewById(R.id.control);
+        controlButton = (FancyButton) binding.getRoot().findViewById(R.id.control);
         controlButton.setOnClickListener(this);
         return binding.getRoot();
     }
@@ -63,42 +64,74 @@ public class PlaySongFragment extends Fragment implements View.OnClickListener {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        TextView toolbarTitle = (TextView) view.findViewById(R.id.toolbar_title);
+        toolbarTitle.setText(song.name);
     }
 
     @Override
-    public void onClick(final View v) {
+    public void onClick(View v) {
         Presenter presenter = Presenter.getPresenter();
-        String text = ((Button) v).getText().toString();
+        final FancyButton fancyButton = (FancyButton) v;
+        String text = fancyButton.getText().toString();
 
         switch (text) {
             case "Stop" :
-                presenter.stop();
-                getActivity().runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ((Button) v).setText(getString(R.string.play));
-                    }
-                });
-                break;
-
-            case "Play" :
-                presenter.start(song.name, new SocketCallbackListener() {
+                presenter.stopPlay(new SocketCallbackListener() {
                     @Override
                     public void onConnect(String roomId, String songList) {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                ((Button) v).setText(getString(R.string.stop));
+                                fancyButton.setText(getString(R.string.play));
+                                fancyButton.setIconResource("\uF04B");
                             }
                         });
                     }
 
                     @Override
                     public void onError(Exception e) {
-                        Toast.makeText(MicApplication.getInstance(), "something got wrong, please check log", Toast.LENGTH_SHORT).show();
-                        e.printStackTrace();
+                        if (e instanceof NetworkException) {
+                            final NetworkException ne = (NetworkException) e;
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ((MainActivity) getActivity()).showSnackbar(ne.getMessage());
+                                }
+                            });
+                        }
                     }
                 });
+                presenter.stopRecord();
+                break;
+
+            case "Play" :
+                SocketCallbackListener listener = new SocketCallbackListener() {
+                    @Override
+                    public void onConnect(String roomId, String songList) {
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                fancyButton.setText(getString(R.string.stop));
+                                fancyButton.setIconResource("\uF04C");
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        if (e instanceof NetworkException) {
+                            final NetworkException ne = (NetworkException) e;
+                            getActivity().runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ((MainActivity) getActivity()).showSnackbar(ne.getMessage());
+                                }
+                            });
+                        }
+                    }
+                };
+                presenter.startPlay(song.name, listener);
+                presenter.startRecord(song.name, listener);
                 break;
         }
 

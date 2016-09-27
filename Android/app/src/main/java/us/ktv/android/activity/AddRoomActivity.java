@@ -4,6 +4,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.content.Intent;
+import android.support.design.widget.TextInputEditText;
 import android.support.v7.app.AppCompatActivity;
 
 import android.os.AsyncTask;
@@ -42,7 +43,7 @@ public class AddRoomActivity extends AppCompatActivity {
 
     // UI references.
     @InjectView(R.id.room_id)
-    protected AutoCompleteTextView mIpPortView;
+    protected TextInputEditText mIpPortView;
 
     @InjectView(R.id.add_room_progress)
     protected View mProgressView;
@@ -177,16 +178,19 @@ public class AddRoomActivity extends AppCompatActivity {
 
         private SocketCallbackListener listener;
 
+        private boolean isConnected;
+
         public AddRoomTask(String ipPort, SocketCallbackListener listener) {
             this.ip = ipPort.split(":")[0];
             this.port = Integer.parseInt(ipPort.split(":") [1]);
             this.listener = listener;
+            this.isConnected = false;
         }
 
         @Override
         protected String doInBackground(String... params) {
-            Presenter presenter = Presenter.getPresenter();
-            presenter.connect(ip, port, listener);
+            Presenter presenter = Presenter.getPresenter(ip, port);
+            isConnected = presenter.connect(ip, port, listener);
             return ip + ":" + port;
         }
 
@@ -195,7 +199,7 @@ public class AddRoomActivity extends AppCompatActivity {
             addRoomTask = null;
             Intent returnIntent = new Intent();
             returnIntent.putExtra(ROOM_ID, roomId);
-            setResult(roomId != null ? RESULT_OK : RESULT_FIRST_USER, returnIntent);
+            setResult(isConnected ? RESULT_OK : RESULT_FIRST_USER, returnIntent);
             showProgress(false);
             finish();
         }
